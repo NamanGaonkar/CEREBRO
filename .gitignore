@@ -1,0 +1,17 @@
+# binaries
+/cerebro
+/cerebro.exe
+*.exe~
+*~
+
+# downloads & partial state
+/downloads/
+*.part
+*.part.meta
+.cerebro_*
+
+# toolchain
+/tmp/
+
+# keep this file local (do not upload)
+donottouch.txt

@@ -1,0 +1,34 @@
+{
+    "version": "2.0.1",
+    "description": "High-performance TUI universal search & download manager - torrents, YouTube, PDFs, comics, movies and music in one terminal dashboard",
+    "homepage": "https://github.com/NamanGaonkar/CEREBRO",
+    "license": "MIT",
+    "notes": [
+        "ffmpeg is only required for YouTube 4K/1080p merging and MP3 conversion; everything else works without it.",
+        "Install it with: scoop install ffmpeg"
+    ],
+    "suggest": {
+        "ffmpeg": "ffmpeg"
+    },
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/NamanGaonkar/CEREBRO/releases/download/v2.0.1/cerebro-windows-amd64.zip",
+            "hash": "5b612c07314ed679e9dbc91dac1516a6f029030272eba6812ac446075b9573ee"
+        }
+    },
+    "bin": "cerebro.exe",
+    "checkver": {
+        "github": "https://github.com/NamanGaonkar/CEREBRO"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/NamanGaonkar/CEREBRO/releases/download/v$version/cerebro-windows-amd64.zip",
+                "hash": {
+                    "url": "https://github.com/NamanGaonkar/CEREBRO/releases/download/v$version/cerebro-windows-amd64.zip.sha256",
+                    "regex": "$sha256"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,91 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            ext: .exe
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            ext: ""
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            ext: ""
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            ext: ""
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            ext: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Build & package
+        shell: pwsh
+        run: |
+          $env:GOOS = "${{ matrix.goos }}"
+          $env:GOARCH = "${{ matrix.goarch }}"
+          $env:CGO_ENABLED = "0"
+          go build -trimpath -ldflags "-s -w -X main.version=${{ github.ref_name }}" -o "cerebro${{ matrix.ext }}" ./cmd/app
+          if ("${{ matrix.ext }}" -eq ".exe") {
+            Compress-Archive -Path "cerebro.exe" -DestinationPath "cerebro-windows-${{ matrix.goarch }}.zip" -Force
+            $Artifact = "cerebro-windows-${{ matrix.goarch }}.zip"
+          } else {
+            tar -czf "cerebro-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" "cerebro"
+            $Artifact = "cerebro-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz"
+          }
+          # Publish a .sha256 sidecar for each archive (used by the Scoop bucket autoupdate)
+          (Get-FileHash -Algorithm SHA256 $Artifact).Hash | Set-Content -NoNewline "$Artifact.sha256"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cerebro-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            cerebro-windows-*.zip
+            cerebro-windows-*.zip.sha256
+            cerebro-*.tar.gz
+            cerebro-*.tar.gz.sha256
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cerebro-*
+          merge-multiple: true
+          path: dist
+
+      - name: Upload binaries to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
