@@ -1,5 +1,5 @@
 {
-    "version": "2.0.3",
+    "version": "2.0.4",
     "description": "High-performance TUI universal search & download manager - torrents, YouTube, PDFs, comics, movies and music in one terminal dashboard",
     "homepage": "https://github.com/NamanGaonkar/CEREBRO",
     "license": "MIT",
@@ -12,8 +12,8 @@
     },
     "architecture": {
         "64bit": {
-            "url": "https://github.com/NamanGaonkar/CEREBRO/releases/download/v2.0.3/cerebro-windows-amd64.zip",
-            "hash": "94c8463b5c8803124b08bcf3f2d39527c051972f84ae9001f26cc691bde41bd4"
+            "url": "https://github.com/NamanGaonkar/CEREBRO/releases/download/v2.0.4/cerebro-windows-amd64.zip",
+            "hash": "575afee0fce9e910a904b8a1749242579991b0d1e2b48f6f931560e17da6ddb1"
         }
     },
     "bin": "cerebro.exe",
