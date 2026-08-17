@@ -1,7 +1,7 @@
 // Package intel implements Cerebro Intel: autonomous OSINT-style
 // reconnaissance and general information retrieval over public endpoints
 // (zero API keys), routed through the DoH transport so ISP-level blocks are
-// bypassed. It probes 40+ platforms for a username, aggregates person/entity
+// bypassed. It probes 90+ platforms for a username, aggregates person/entity
 // snippets from Wikipedia and DuckDuckGo, and streams findings live.
 package intel
 

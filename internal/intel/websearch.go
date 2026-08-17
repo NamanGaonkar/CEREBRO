@@ -22,21 +22,42 @@ var (
 	reWebSnippet = regexp.MustCompile(`(?s)<a[^>]*class="result__snippet"[^>]*>(.*?)</a>`)
 	// DuckDuckGo Lite markup: bare result links, far less bot-walled.
 	reLiteLink = regexp.MustCompile(`(?s)<a rel="nofollow" href="([^"]+)"[^>]*>(.*?)</a>`)
-	reTag      = regexp.MustCompile(`(?s)<[^>]+>`)
+	// Mojeek markup: independent index with direct (non-redirect) result links.
+	reMojeekTitle   = regexp.MustCompile(`(?s)<a class="title" href="([^"]+)"[^>]*>(.*?)</a>`)
+	reMojeekSnippet = regexp.MustCompile(`(?s)<p class="s">(.*?)</p>`)
+	reTag           = regexp.MustCompile(`(?s)<[^>]+>`)
 )
 
-// webSearch runs organic web searches across fallback engines and returns the
-// top hits with their real (unwrapped) URLs. DuckDuckGo Lite is tried first
-// (simple, reliable markup that rarely rate-limits); the full HTML endpoint
-// backs it up with snippets. This is what makes recon diverse: typing a name,
+// webSearch runs organic web searches across multiple engines and returns the
+// top UNIQUE hits with their real (unwrapped) URLs. Every engine runs and the
+// results are merged with URL dedup, so coverage is far broader than any
+// single scraper: DuckDuckGo Lite (simple, reliable markup that rarely
+// rate-limits), its full HTML endpoint (snippets), and Mojeek (an independent
+// index) all contribute. This is what makes recon diverse: typing a name,
 // handle or topic surfaces articles, profiles, news and mentions across the
-// internet — not just platform probes or a Wikipedia summary. Failures
-// return nil.
+// internet — not just platform probes or a Wikipedia summary. Failures of
+// individual engines are silent; if every engine fails the result is nil.
 func webSearch(ctx context.Context, client *http.Client, q string, limit int) []webHit {
-	if hits := webSearchLite(ctx, client, q, limit); len(hits) > 0 {
-		return hits
+	var hits []webHit
+	seen := make(map[string]bool)
+	engines := []func(context.Context, *http.Client, string, int) []webHit{
+		webSearchLite,
+		webSearchHTML,
+		webSearchMojeek,
 	}
-	return webSearchHTML(ctx, client, q, limit)
+	for _, e := range engines {
+		for _, h := range e(ctx, client, q, limit) {
+			if h.URL == "" || seen[h.URL] {
+				continue
+			}
+			seen[h.URL] = true
+			hits = append(hits, h)
+			if limit > 0 && len(hits) >= limit {
+				return hits
+			}
+		}
+	}
+	return hits
 }
 
 // webSearchLite scrapes DuckDuckGo Lite: a bare table of result links.
@@ -59,6 +80,45 @@ func webSearchLite(ctx context.Context, client *http.Client, q string, limit int
 			continue
 		}
 		hits = append(hits, webHit{Title: title, URL: real})
+	}
+	return hits
+}
+
+// webSearchMojeek scrapes Mojeek, an independent search index whose result
+// links point straight at the destination (no redirect wrapper) and whose
+// markup is simple and stable. It is the third engine in the merge, catching
+// hits DuckDuckGo's scrapers miss or refuse.
+func webSearchMojeek(ctx context.Context, client *http.Client, q string, limit int) []webHit {
+	body := fetch(ctx, client, "https://www.mojeek.com/search?q="+url.QueryEscape(q))
+	if body == "" {
+		return nil
+	}
+	return parseMojeek(body, limit)
+}
+
+// parseMojeek extracts result rows from a Mojeek search page: direct result
+// links (a.title) with their snippet paragraphs (p.s).
+func parseMojeek(body string, limit int) []webHit {
+	titleM := reMojeekTitle.FindAllStringSubmatch(body, -1)
+	snipM := reMojeekSnippet.FindAllStringSubmatch(body, -1)
+	var hits []webHit
+	for i, m := range titleM {
+		if len(m) < 3 || limit > 0 && len(hits) >= limit {
+			break
+		}
+		real := strings.TrimSpace(m[1])
+		if real == "" || isAdURL(real) {
+			continue
+		}
+		title := cleanHTML(m[2])
+		if title == "" {
+			continue
+		}
+		snip := ""
+		if i < len(snipM) && len(snipM[i]) > 1 {
+			snip = cleanHTML(snipM[i][1])
+		}
+		hits = append(hits, webHit{Title: title, URL: real, Snippet: snip})
 	}
 	return hits
 }

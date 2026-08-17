@@ -6,8 +6,8 @@ import (
 )
 
 func TestPlatformRegistry(t *testing.T) {
-	if platformCount() < 40 {
-		t.Fatalf("expected 40+ platforms, got %d", platformCount())
+	if platformCount() < 80 {
+		t.Fatalf("expected 80+ platforms, got %d", platformCount())
 	}
 	for _, p := range platforms {
 		if p.name == "" || p.url == nil {

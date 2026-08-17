@@ -108,7 +108,9 @@ func Run(ctx context.Context, client *http.Client, target string, out chan<- Fin
 		case <-ctx.Done():
 			return
 		}
-		for _, h := range webSearch(ctx, client, target, 10) {
+		// 12 unique hits merged across the search engines (DuckDuckGo Lite +
+		// HTML + Mojeek), so @/? mode shows a genuinely wide web footprint.
+		for _, h := range webSearch(ctx, client, target, 12) {
 			add(Finding{Platform: "Web · " + hostOf(h.URL), URL: h.URL, Status: StatusFound, Detail: h.Title})
 		}
 	}()

@@ -69,7 +69,7 @@ typing a query (e.g. `interstellar`), press `Enter`, arrow through the results
 and press `Enter` to download. The omnibar also accepts pasted **magnet links**
 (downloads instantly), **YouTube URLs** (quality menu) and any **direct URL**
 (downloads straight away). Prefix a query with `@` or `?` to run **Cerebro
-Intel** (`@handle` probes accounts across 40+ platforms, `?topic` runs a
+Intel** (`@handle` probes accounts across 90+ platforms, `?topic` runs a
 knowledge deep-search, `@Full Name` runs a person search across the whole
 internet), or run `cerebro intel <target>` from the shell. Files land in
 `./downloads/`. Best experienced in Windows Terminal, iTerm2, or any 256-color
@@ -94,7 +94,7 @@ terminal.
 ## 🕵️ MAX Mode (OSINT & deep research)
 
 MAX Mode is Cerebro's autonomous reconnaissance engine — it takes a username,
-a person's name, or any topic and probes **40+ public platforms** concurrently
+a person's name, or any topic and probes **90+ public platforms** concurrently
 (GitHub, Reddit, X/Twitter, YouTube, Steam, LinkedIn, ORCID, LeetCode, NPM,
 PyPI, HuggingFace…), then synthesizes a **Wikipedia + DuckDuckGo** summary.
 Zero API keys, all traffic routed through the built-in DoH transport.
@@ -116,7 +116,7 @@ is made:
 
 | You type | Mode | What runs |
 | --- | --- | --- |
-| `@torvalds` or `torvalds` | **username** | 40+ platform profile probes |
+| `@torvalds` or `torvalds` | **username** | 90+ platform profile probes |
 | `?quantum computing`, `what is amoeba`, `black holes` | **topic** | Wikipedia + DuckDuckGo **only** — never username probes |
 | `Elon Musk`, `Kartik Sharma`, `@Naman Gaonkar` | **person** | profile probes + web-wide search + verified Wikipedia bio |
 
@@ -173,7 +173,7 @@ merely contains the word.
   seconds, no waiting.
 - **Cerebro Intel** — autonomous OSINT / deep research, zero API keys: run
   `cerebro intel <target>` or type `@handle` / `?topic` in the omnibar. It
-  probes **40+ platforms** concurrently (GitHub, Reddit, X, YouTube, Steam,
+  probes **90+ platforms** concurrently (GitHub, Reddit, X, YouTube, Steam,
   LinkedIn, ORCID…), pulling a **Wikipedia + DuckDuckGo** summary for people
   and topics, then shows a split dashboard with `FOUND` / `UNVERIFIED` /
   `NOT FOUND` badges. `Enter` opens the profile, `y` copies the URL, `e`

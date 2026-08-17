@@ -130,39 +130,44 @@ func Stream(ctx context.Context, magnet, dir string) error {
 // It tries, in order: (1) the highest-quality separate video + audio streams
 // merged in mpv via --audio-file (1080p/4K; most modern videos have no muxed
 // format, and when one exists it is usually 240p), (2) the best muxed format,
-// and finally (3) hands the plain watch URL to mpv so its built-in yt-dlp
-// support resolves the video — a bulletproof fallback when the one-shot
-// googlevideo URLs above are expired/blocked (which surfaces as mpv exit 2).
-// mpv's stdio is detached so the TUI terminal is never garbled.
+// (3) the direct stream URLs resolved by yt-dlp ourselves, and finally (4)
+// hands the plain watch URL to mpv with --ytdl-path so mpv's own battle-tested
+// yt-dlp integration does the whole job. Every failure — including a bot-check
+// or age gate that makes the innertube client error out entirely — falls
+// through to the next path instead of aborting, so a handful of stubborn
+// videos (lives, premieres, member-only) still play. mpv's stdio is detached
+// so the TUI terminal is never garbled.
 func StreamYouTube(ctx context.Context, videoID string) error {
 	mpv, err := findMpv()
 	if err != nil {
 		return err
 	}
-	client := &youtube.Client{}
-	v, err := client.GetVideo(videoID)
-	if err != nil {
-		return fmt.Errorf("youtube: %w", err)
-	}
-
+	watchURL := "https://www.youtube.com/watch?v=" + videoID
 	args := []string{"--cache=yes", "--demuxer-max-bytes=100M", "--force-window", "--no-terminal"}
 
-	// Path 1: separate best video + best audio streams merged in mpv.
-	if bestV, bestA, err := bestSeparateFormats(v); err == nil {
-		if videoURL, vErr := client.GetStreamURL(v, bestV); vErr == nil {
-			if audioURL, aErr := client.GetStreamURL(v, bestA); aErr == nil {
-				if runMpv(ctx, mpv, append(args, "--audio-file="+audioURL, videoURL)) == nil {
-					return nil
+	// Paths 1-2 use the innertube client. A GetVideo failure here must never
+	// abort playback: videos that trip YouTube's bot checks, age gates or live
+	// streaming can fail this API while playing perfectly fine via yt-dlp, so
+	// any error just falls through to the yt-dlp paths below.
+	client := &youtube.Client{}
+	if v, vErr := client.GetVideo(videoID); vErr == nil && len(v.Formats) > 0 {
+		// Path 1: separate best video + best audio streams merged in mpv.
+		if bestV, bestA, fErr := bestSeparateFormats(v); fErr == nil {
+			if videoURL, sErr := client.GetStreamURL(v, bestV); sErr == nil {
+				if audioURL, aErr := client.GetStreamURL(v, bestA); aErr == nil {
+					if runMpv(ctx, mpv, append(args, "--audio-file="+audioURL, videoURL)) == nil {
+						return nil
+					}
 				}
 			}
 		}
-	}
 
-	// Path 2: best muxed format as a single URL.
-	if f, ok := bestMuxedFormat(v); ok {
-		if streamURL, sErr := client.GetStreamURL(v, &f); sErr == nil {
-			if runMpv(ctx, mpv, append(args, streamURL)) == nil {
-				return nil
+		// Path 2: best muxed format as a single URL.
+		if f, ok := bestMuxedFormat(v); ok {
+			if streamURL, sErr := client.GetStreamURL(v, &f); sErr == nil {
+				if runMpv(ctx, mpv, append(args, streamURL)) == nil {
+					return nil
+				}
 			}
 		}
 	}
@@ -177,7 +182,9 @@ func StreamYouTube(ctx context.Context, videoID string) error {
 	if fErr != nil {
 		return fErr
 	}
-	if videoURL, audioURL, rErr := resolveWithYtDlp(ctx, ytdlp, "https://www.youtube.com/watch?v="+videoID); rErr == nil {
+	lastErr := fErr // remember the most recent failure for the final message
+	if videoURL, audioURL, rErr := resolveWithYtDlp(ctx, ytdlp, watchURL); rErr == nil {
+		lastErr = nil
 		if audioURL != "" {
 			err = runMpv(ctx, mpv, append(args, "--audio-file="+audioURL, videoURL))
 		} else {
@@ -186,8 +193,19 @@ func StreamYouTube(ctx context.Context, videoID string) error {
 		if err == nil {
 			return nil
 		}
+		lastErr = err
+	} else {
+		lastErr = rErr
 	}
-	return fmt.Errorf("streaming failed: %w", err)
+
+	// Path 4 (final): hand the watch URL to mpv itself with --ytdl-path, so
+	// mpv's built-in yt-dlp integration does the entire job — format selection,
+	// merging, live streams, premieres. This is the most battle-tested route
+	// and catches anything the manual resolution above missed.
+	if err := runMpv(ctx, mpv, append(args, "--ytdl-path="+filepath.ToSlash(ytdlp), watchURL)); err == nil {
+		return nil
+	}
+	return fmt.Errorf("streaming failed — mpv could not play any resolved stream for this video: %w", lastErr)
 }
 
 // findYtDlp locates the yt-dlp binary. exec.LookPath covers installs on

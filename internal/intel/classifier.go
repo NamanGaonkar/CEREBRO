@@ -6,7 +6,7 @@ import "strings"
 type Intent int
 
 const (
-	// IntentHandle probes 40+ social/developer platforms for a username
+	// IntentHandle probes 90+ social/developer platforms for a username
 	// (@handle or a single bare handle like "torvalds").
 	IntentHandle Intent = iota
 	// IntentConcept is a topic / definition / general-knowledge query
